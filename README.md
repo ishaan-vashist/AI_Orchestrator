@@ -1,21 +1,23 @@
 # AI Task Orchestrator
 
-The AI Task Orchestrator is a modular application that uses LLMs and containerized NLP microservices to automate a sequence of tasks like cleaning text, sentiment analysis, and summarization — all based on natural language instructions.
+The AI Task Orchestrator is a modular application that uses LLMs and containerized NLP microservices to automate a sequence of tasks like cleaning text, sentiment analysis, and summarization based on natural language instructions.
 
 ---
 
-##  Features
+## Features
 
--  Web UI built with Streamlit
--  FastAPI-based backend orchestrator
--  Groq LLM (or OpenAI fallback) for parsing task flows from user input
--  Dockerized NLP tasks:
-  - `clean_text`
-  - `sentiment_analysis`
-  - `summarization`
--  Automatically executes tasks in a pipeline
--  Easily extendable with new tasks
--  Works cross-platform (Windows-safe paths handled)
+- Web UI built with Streamlit
+- FastAPI-based backend orchestrator
+- Groq LLM (or OpenAI fallback) for parsing task flows from user input
+- Dockerized NLP tasks:
+  - clean_text
+  - sentiment_analysis
+  - summarization
+- Automatically executes tasks in a pipeline
+- Easily extendable with new tasks
+- Works cross-platform (Windows-safe paths handled)
+- Robust error handling (LLM failure, file I/O, Docker errors)
+- Logs important task activity and errors for debugging
 
 ---
 
@@ -45,6 +47,50 @@ ai-orchestrator/
 │   └── summarization/
 │       ├── Dockerfile
 │       └── app.py
+```
+
+---
+
+## System Architecture
+
+```
+                  AI Task Orchestrator
+                          |
+                +----------------------+
+                |  Streamlit UI (User) |
+                |----------------------|
+                | - User inputs task   |
+                | - Sends to API       |
+                | - Displays results   |
+                +----------------------+
+                          |
+                          v
+                +------------------------+
+                | FastAPI Orchestrator   |
+                |------------------------|
+                | - Calls Groq API       |
+                | - Parses task plan     |
+                | - Runs tasks in order  |
+                | - Collects outputs     |
+                +------------------------+
+                          |
+                          v
+      +---------------------+     +----------------------+     +---------------------------+
+      |  clean_text         |     | summarization         |     | sentiment_analysis         |
+      |---------------------|     |----------------------|     |---------------------------|
+      | Docker container    |     | Docker container     |     | Docker container          |
+      | Reads input.txt     |     | Reads input.txt      |     | Reads input.txt           |
+      | Outputs cleaned text|     | Outputs summary      |     | Outputs sentiment string  |
+      +---------------------+     +----------------------+     +---------------------------+
+                          |
+                          v
+                +------------------------+
+                |     JSON Response      |
+                |------------------------|
+                | - plan: [tasks...]     |
+                | - outputs: {task: out} |
+                | - final_result: string |
+                +------------------------+
 ```
 
 ---
@@ -81,12 +127,6 @@ source venv/bin/activate    # macOS/Linux
 pip install -r requirements.txt
 ```
 
-If no `requirements.txt` yet, install manually:
-
-```bash
-pip install fastapi uvicorn docker python-dotenv requests streamlit transformers torch
-```
-
 ---
 
 ## Build Docker Containers
@@ -119,34 +159,26 @@ streamlit run app.py
 
 ## How It Works
 
-1. Enter a natural language instruction (e.g., `Clean the text and analyze sentiment`).
-2. The backend uses Groq to infer the required tasks: `["clean_text", "sentiment_analysis"]`.
-3. Each task runs in its own Docker container (or in memory).
-4. Results flow through the pipeline and return to the UI.
-
----
-
-## Adding New Tasks
-
-1. Create a new folder in `tasks/<your_task_name>/`.
-2. Add:
-   - `app.py` to process `/data/input.txt`
-   - `Dockerfile` to containerize it.
-3. Add mapping in `TASK_IMAGE_MAP` in `orchestrator/main.py`.
+1. User submits a natural language task through the UI.
+2. FastAPI backend sends the instruction to Groq API.
+3. Groq returns an ordered list of NLP tasks.
+4. Each task is run inside its Docker container.
+5. The orchestrator passes outputs between tasks and returns a complete JSON response.
 
 ---
 
 ## Notes
 
 - Ensure Docker is installed and running.
-- This app handles Windows paths carefully using `pathlib`.
-- Supports Groq API by default, but you can adapt to OpenAI if needed.
+- Handles Windows paths using pathlib.
+- Logs are printed to console for each task and errors.
+- Supports Groq API by default, but OpenAI can be used as fallback.
 
 ---
 
 ## Acknowledgements
 
-Built as a Backend + DevOps Assignment demonstrating real-world orchestration using:
+Built as a Backend + DevOps Assignment demonstrating practical orchestration using:
 - FastAPI
 - Docker
 - Groq LLM
@@ -156,4 +188,4 @@ Built as a Backend + DevOps Assignment demonstrating real-world orchestration us
 
 ## Author
 
-Ishaan Vashist
+Ishaan Vashist – [your GitHub](https://github.com/ishaan-vashist)
