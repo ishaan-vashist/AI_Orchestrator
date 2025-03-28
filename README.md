@@ -188,4 +188,4 @@ Built as a Backend + DevOps Assignment demonstrating practical orchestration usi
 
 ## Author
 
-Ishaan Vashist – [your GitHub](https://github.com/ishaan-vashist)
+Ishaan Vashist – [GitHub](https://github.com/ishaan-vashist)
