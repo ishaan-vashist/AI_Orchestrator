@@ -8,13 +8,14 @@ from pathlib import Path, PureWindowsPath
 from orchestrator import groq_client
 from docker.errors import DockerException
 
-# Configure logging
+# Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("orchestrator")
 
 app = FastAPI()
 docker_client = docker.from_env()
 
+# Maps task names from LLM to corresponding Docker image
 TASK_IMAGE_MAP = {
     "clean_text": "ai_clean_text",
     "sentiment_analysis": "ai_sentiment_analysis",
@@ -28,6 +29,7 @@ class RequestInput(BaseModel):
 @app.post("/process_request")
 def process_request(data: RequestInput):
     try:
+        # Ask LLM (Groq) to generate a task plan from user's request
         plan = groq_client.get_task_plan(data.user_request)
     except Exception as e:
         logger.error(f"[LLM ERROR] Failed to get task plan: {e}")
@@ -37,6 +39,7 @@ def process_request(data: RequestInput):
     task_outputs = {}
 
     try:
+        # Create a temporary working directory to store input files
         workdir = tempfile.mkdtemp(prefix="orchestrator_")
     except Exception as e:
         logger.error(f"[DIR ERROR] Failed to create temp directory: {e}")
@@ -47,6 +50,7 @@ def process_request(data: RequestInput):
         if not image:
             return {"error": f"Unknown task: {task}"}
 
+        # Write input text to a file for Docker to consume
         input_path = os.path.join(workdir, f"input_{task}.txt")
         try:
             with open(input_path, "w", encoding="utf-8") as f:
@@ -55,6 +59,7 @@ def process_request(data: RequestInput):
             logger.error(f"[FILE ERROR] Failed to write input file: {e}")
             return {"error": "Internal error writing input file."}
 
+        # Normalize file path for Docker compatibility on Windows
         abs_path = Path(input_path).resolve()
         docker_input_path = str(PureWindowsPath(abs_path))
 
@@ -62,15 +67,16 @@ def process_request(data: RequestInput):
         logger.debug(f"[TASK] Mounting: {docker_input_path}")
 
         try:
+            # Run the container with mounted input file
             output = docker_client.containers.run(
                 image=image,
                 volumes={docker_input_path: {"bind": "/data/input.txt", "mode": "ro"}},
                 remove=True
             )
             result = output.decode("utf-8").strip()
-            logger.info(f"[OUTPUT] {task}: {result[:100]}...")  # limit preview length
+            logger.info(f"[OUTPUT] {task}: {result[:100]}...")  # Log preview only
             task_outputs[task] = result
-            current_text = result
+            current_text = result  # Pass result to next task
 
         except DockerException as e:
             logger.error(f"[DOCKER ERROR] Task failed: {task} — {str(e)}")
